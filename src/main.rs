@@ -1,4 +1,5 @@
 use geng::prelude::*;
+use std::collections::VecDeque;
 
 mod client;
 mod common;

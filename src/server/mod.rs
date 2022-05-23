@@ -19,9 +19,16 @@ impl ServerState {
     }
     fn handle_message(&mut self, client_id: ClientId, message: ClientMessage) {
         match message {
-            ClientMessage::Update(update) => {
-                for client in self.clients.values_mut() {
-                    client.send(ServerMessage::Update(update.clone())); // TODO: not clone
+            ClientMessage::Update { id, update } => {
+                for (&other_client_id, client) in &mut self.clients {
+                    client.send(ServerMessage::Update {
+                        your_id: if other_client_id == client_id {
+                            Some(id)
+                        } else {
+                            None
+                        },
+                        update: update.clone(), // TODO: not clone
+                    });
                 }
                 self.state.update(update);
             }

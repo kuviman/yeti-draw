@@ -2,6 +2,7 @@ use super::*;
 
 pub struct Infinite {
     geng: Geng,
+    pixels: HashMap<Vec2<i32>, Color<u8>>,
     chunks: HashMap<Vec2<i32>, Chunk>,
 }
 
@@ -34,6 +35,7 @@ impl Infinite {
     pub fn new(geng: &Geng) -> Self {
         Self {
             geng: geng.clone(),
+            pixels: default(),
             chunks: HashMap::new(),
         }
     }
@@ -48,10 +50,21 @@ impl Infinite {
         ));
         result
     }
-    pub fn update(&mut self, update: Update) {
+    pub fn update(&mut self, update: Update) -> Update {
         match update {
             Update::Draw(pixels) => {
+                let mut reverse = Vec::with_capacity(pixels.len());
                 for pixel in pixels {
+                    reverse.push(Pixel {
+                        position: pixel.position,
+                        color: self
+                            .pixels
+                            .get(&pixel.position)
+                            .copied()
+                            .unwrap_or(Color::TRANSPARENT_BLACK),
+                    });
+                    self.pixels.insert(pixel.position, pixel.color);
+
                     let chunk_pos = pixel.position.map(|x| div_down(x, Self::CHUNK_SIZE as _));
                     let chunk = self.chunks.entry(chunk_pos).or_insert_with(|| Chunk {
                         ugli: {
@@ -70,6 +83,7 @@ impl Infinite {
                         .ugli
                         .sub_image(pixel_position, vec2(1, 1), pixel.color.as_slice());
                 }
+                Update::Draw(reverse)
             }
         }
     }

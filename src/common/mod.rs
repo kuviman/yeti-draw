@@ -31,13 +31,18 @@ pub enum Update {
     Draw(Vec<Pixel>),
 }
 
+pub type UpdateId = u64;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ClientMessage {
-    Update(Update),
+    Update { id: UpdateId, update: Update },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ServerMessage {
     Initial(Texture),
-    Update(Update),
+    Update {
+        your_id: Option<UpdateId>,
+        update: Update,
+    },
 }
