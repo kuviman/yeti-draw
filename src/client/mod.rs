@@ -54,6 +54,7 @@ pub struct Client {
     framebuffer_size: Vec2<usize>,
     camera: geng::Camera2d,
     stroke: Option<Stroke>,
+    color: Color<f32>,
 }
 
 struct Stroke {
@@ -74,6 +75,7 @@ impl Client {
                 fov: 100.0,
             },
             stroke: None,
+            color: Color::BLACK,
         }
     }
 }
@@ -108,7 +110,7 @@ impl geng::State for Client {
                     &self.camera,
                     &draw_2d::Quad::new(
                         AABB::point(position.map(|x| x as f32)).extend_positive(vec2(1.0, 1.0)),
-                        Color::BLACK,
+                        self.color,
                     ),
                 );
             }
@@ -161,12 +163,21 @@ impl geng::State for Client {
                             .into_iter()
                             .map(|position| Pixel {
                                 position,
-                                color: Color::BLACK,
+                                color: self.color.convert(),
                             })
                             .collect(),
                     )));
                 }
             }
+            geng::Event::KeyDown { key } => match key {
+                geng::Key::W => {
+                    self.color = Color::WHITE;
+                }
+                geng::Key::B => {
+                    self.color = Color::BLACK;
+                }
+                _ => {}
+            },
             _ => {}
         }
     }
