@@ -55,6 +55,7 @@ pub struct Client {
     camera: geng::Camera2d,
     stroke: Option<Stroke>,
     color: Color<f32>,
+    brush_size: f32,
 }
 
 struct Stroke {
@@ -75,7 +76,42 @@ impl Client {
                 fov: 100.0,
             },
             stroke: None,
+            brush_size: 1.0,
             color: Color::BLACK,
+        }
+    }
+    fn screen_to_world(&self, position: Vec2<f64>) -> Vec2<f32> {
+        self.camera
+            .screen_to_world(
+                self.framebuffer_size.map(|x| x as f32),
+                position.map(|x| x as f32),
+            )
+            .map(|x| x.round())
+    }
+    fn mouse_move(&mut self, position: Vec2<f32>) {
+        fn distance(a: Vec2<f32>, b: Vec2<f32>, p: Vec2<f32>) -> f32 {
+            if Vec2::dot(p - a, b - a) <= 0.0 {
+                return (p - a).len();
+            }
+            if Vec2::dot(p - b, a - b) <= 0.0 {
+                return (p - b).len();
+            }
+            Vec2::skew(p - a, (b - a).normalize_or_zero()).abs()
+        }
+
+        if let Some(stroke) = &mut self.stroke {
+            let a = position;
+            let b = stroke.last_position;
+            let aabb = AABB::points_bounding_box([a, b]).extend_uniform(self.brush_size);
+            for x in aabb.x_min.floor() as i32..=aabb.x_max.ceil() as i32 {
+                for y in aabb.y_min.floor() as i32..=aabb.y_max.ceil() as i32 {
+                    let p = vec2(x as f32 + 0.5, y as f32 + 0.5);
+                    if distance(a, b, p) < self.brush_size {
+                        stroke.pixels.insert(vec2(x, y));
+                    }
+                }
+            }
+            stroke.last_position = position;
         }
     }
 }
@@ -122,40 +158,22 @@ impl geng::State for Client {
                 position,
                 button: geng::MouseButton::Left,
             } => {
-                let position = self.camera.screen_to_world(
-                    self.framebuffer_size.map(|x| x as f32),
-                    position.map(|x| x as f32),
-                );
+                let position = self.screen_to_world(position);
                 self.stroke = Some(Stroke {
                     pixels: default(),
                     last_position: position,
                 });
+                self.mouse_move(position);
             }
             geng::Event::MouseMove { position, delta: _ } => {
-                let position = self.camera.screen_to_world(
-                    self.framebuffer_size.map(|x| x as f32),
-                    position.map(|x| x as f32),
-                );
-                if let Some(stroke) = &mut self.stroke {
-                    let v = position - stroke.last_position;
-                    let n = (v.len() * 2.0 + 1.0) as i32;
-                    for i in 0..=n {
-                        stroke.pixels.insert(
-                            (stroke.last_position + v * i as f32 / n as f32)
-                                .map(|x| x.floor() as i32),
-                        );
-                    }
-                    stroke.last_position = position;
-                }
+                let position = self.screen_to_world(position);
+                self.mouse_move(position);
             }
             geng::Event::MouseUp {
                 position,
                 button: geng::MouseButton::Left,
             } => {
-                let position = self.camera.screen_to_world(
-                    self.framebuffer_size.map(|x| x as f32),
-                    position.map(|x| x as f32),
-                );
+                let position = self.screen_to_world(position);
                 if let Some(stroke) = self.stroke.take() {
                     self.connection.send(ClientMessage::Update(Update::Draw(
                         stroke
@@ -175,6 +193,12 @@ impl geng::State for Client {
                 }
                 geng::Key::B => {
                     self.color = Color::BLACK;
+                }
+                geng::Key::PageUp => {
+                    self.brush_size = (self.brush_size + 0.5).min(10.0);
+                }
+                geng::Key::PageDown => {
+                    self.brush_size = (self.brush_size - 0.5).max(0.5);
                 }
                 _ => {}
             },
