@@ -6,7 +6,7 @@ type ClientState = Box<dyn geng::net::Sender<ServerMessage>>;
 struct ServerState {
     next_client_id: ClientId,
     clients: HashMap<ClientId, ClientState>,
-    state: State,
+    state: Texture,
 }
 
 impl ServerState {
@@ -14,7 +14,7 @@ impl ServerState {
         Self {
             next_client_id: 0,
             clients: default(),
-            state: State::new(),
+            state: Texture::new(),
         }
     }
     fn handle_message(&mut self, client_id: ClientId, message: ClientMessage) {

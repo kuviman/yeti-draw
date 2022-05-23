@@ -1,19 +1,19 @@
 use super::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct State {
-    pub image: HashMap<Vec2<i32>, Color<u8>>,
+pub struct Texture {
+    pub pixels: HashMap<Vec2<i32>, Color<u8>>,
 }
 
-impl State {
+impl Texture {
     pub fn new() -> Self {
-        Self { image: default() }
+        Self { pixels: default() }
     }
     pub fn update(&mut self, update: Update) {
         match update {
             Update::Draw(pixels) => {
                 for pixel in pixels {
-                    self.image.insert(pixel.position, pixel.color);
+                    self.pixels.insert(pixel.position, pixel.color);
                 }
             }
         }
@@ -38,6 +38,6 @@ pub enum ClientMessage {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ServerMessage {
-    Initial(State),
+    Initial(Texture),
     Update(Update),
 }
