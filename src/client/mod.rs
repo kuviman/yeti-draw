@@ -18,6 +18,7 @@ pub struct Client {
 
 struct Stroke {
     pixels: HashSet<Vec2<i32>>,
+    texture: texture::Infinite,
     last_position: Vec2<f32>,
 }
 
@@ -26,7 +27,7 @@ impl Client {
         Self {
             geng: geng.clone(),
             connection,
-            state: texture::Infinite::new(geng, initial_state),
+            state: texture::Infinite::from(geng, initial_state),
             framebuffer_size: vec2(1, 1),
             camera: geng::Camera2d {
                 center: vec2(0.0, 0.0),
@@ -67,6 +68,10 @@ impl Client {
                     let p = vec2(x as f32 + 0.5, y as f32 + 0.5);
                     if distance(a, b, p) < self.brush_size {
                         stroke.pixels.insert(vec2(x, y));
+                        stroke.texture.update(Update::Draw(vec![Pixel {
+                            position: vec2(x, y),
+                            color: self.color.convert(),
+                        }]));
                     }
                 }
             }
@@ -91,16 +96,7 @@ impl geng::State for Client {
         ugli::clear(framebuffer, Some(Color::WHITE), None);
         self.state.draw(framebuffer, &self.camera);
         if let Some(stroke) = &self.stroke {
-            for &position in &stroke.pixels {
-                self.geng.draw_2d(
-                    framebuffer,
-                    &self.camera,
-                    &draw_2d::Quad::new(
-                        AABB::point(position.map(|x| x as f32)).extend_positive(vec2(1.0, 1.0)),
-                        self.color,
-                    ),
-                );
-            }
+            stroke.texture.draw(framebuffer, &self.camera);
         }
     }
     fn handle_event(&mut self, event: geng::Event) {
@@ -152,6 +148,7 @@ impl geng::State for Client {
                 let position = self.screen_to_world(position);
                 self.stroke = Some(Stroke {
                     pixels: default(),
+                    texture: texture::Infinite::new(&self.geng),
                     last_position: position,
                 });
                 self.mouse_move(position);

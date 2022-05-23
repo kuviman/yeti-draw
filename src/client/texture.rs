@@ -31,11 +31,14 @@ fn div_up<T: Num>(a: T, b: T) -> T {
 
 impl Infinite {
     const CHUNK_SIZE: usize = 64;
-    pub fn new(geng: &Geng, texture: Texture) -> Self {
-        let mut result = Self {
+    pub fn new(geng: &Geng) -> Self {
+        Self {
             geng: geng.clone(),
             chunks: HashMap::new(),
-        };
+        }
+    }
+    pub fn from(geng: &Geng, texture: Texture) -> Self {
+        let mut result = Self::new(geng);
         result.update(Update::Draw(
             texture
                 .pixels
