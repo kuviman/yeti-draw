@@ -56,6 +56,7 @@ pub struct Client {
     stroke: Option<Stroke>,
     color: Color<f32>,
     brush_size: f32,
+    camera_drag_start: Option<Vec2<f32>>,
 }
 
 struct Stroke {
@@ -78,6 +79,7 @@ impl Client {
             stroke: None,
             brush_size: 1.0,
             color: Color::BLACK,
+            camera_drag_start: None,
         }
     }
     fn screen_to_world(&self, position: Vec2<f64>) -> Vec2<f32> {
@@ -153,6 +155,37 @@ impl geng::State for Client {
         }
     }
     fn handle_event(&mut self, event: geng::Event) {
+        match event {
+            // Camera controls
+            geng::Event::Wheel { delta } => {
+                self.camera.fov =
+                    (self.camera.fov * 1.01f32.powf(-delta as f32)).clamp(100.0, 3000.0);
+            }
+            geng::Event::MouseDown {
+                position,
+                button: geng::MouseButton::Middle,
+            } => {
+                self.camera_drag_start = Some(self.camera.screen_to_world(
+                    self.framebuffer_size.map(|x| x as f32),
+                    position.map(|x| x as f32),
+                ));
+            }
+            geng::Event::MouseMove { position, .. } => {
+                if let Some(start) = self.camera_drag_start {
+                    let current_pos = self.camera.screen_to_world(
+                        self.framebuffer_size.map(|x| x as f32),
+                        position.map(|x| x as f32),
+                    );
+                    self.camera.center += start - current_pos;
+                }
+            }
+            geng::Event::MouseUp {
+                button: geng::MouseButton::Middle,
+                ..
+            } => self.camera_drag_start = None,
+            _ => {}
+        }
+
         match event {
             geng::Event::MouseDown {
                 position,
