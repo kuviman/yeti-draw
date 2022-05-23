@@ -1,56 +1,13 @@
 use super::*;
 
+mod texture;
+
 type Connection = geng::net::client::Connection<ServerMessage, ClientMessage>;
-
-pub struct ClientTexture {
-    geng: Geng,
-    inner: Texture,
-    position: Vec2<i32>,
-    ugli: ugli::Texture,
-}
-
-impl ClientTexture {
-    pub fn new(geng: &Geng, texture: Texture) -> Self {
-        if texture.pixels.is_empty() {
-            return Self {
-                geng: geng.clone(),
-                inner: texture,
-                position: vec2(0, 0),
-                ugli: ugli::Texture::new_with(geng.ugli(), vec2(1, 1), |_| {
-                    Color::TRANSPARENT_BLACK
-                }),
-            };
-        }
-        let aabb = AABB::points_bounding_box(texture.pixels.keys().copied());
-        let mut ugli = ugli::Texture::new_with(
-            geng.ugli(),
-            aabb.size().map(|x| (x + 1) as usize),
-            |position| {
-                let position = position.map(|x| x as i32) + aabb.bottom_left();
-                match texture.pixels.get(&position) {
-                    Some(color) => color.convert(),
-                    None => Color::TRANSPARENT_BLACK,
-                }
-            },
-        );
-        ugli.set_filter(ugli::Filter::Nearest);
-        Self {
-            geng: geng.clone(),
-            inner: texture,
-            position: aabb.bottom_left(),
-            ugli,
-        }
-    }
-    pub fn update(&mut self, update: Update) {
-        self.inner.update(update);
-        *self = Self::new(&self.geng, self.inner.clone());
-    }
-}
 
 pub struct Client {
     geng: Geng,
     connection: Connection,
-    state: ClientTexture,
+    state: texture::Infinite,
     framebuffer_size: Vec2<usize>,
     camera: geng::Camera2d,
     stroke: Option<Stroke>,
@@ -69,7 +26,7 @@ impl Client {
         Self {
             geng: geng.clone(),
             connection,
-            state: ClientTexture::new(geng, initial_state),
+            state: texture::Infinite::new(geng, initial_state),
             framebuffer_size: vec2(1, 1),
             camera: geng::Camera2d {
                 center: vec2(0.0, 0.0),
@@ -132,15 +89,7 @@ impl geng::State for Client {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Color::WHITE), None);
-        self.geng.draw_2d(
-            framebuffer,
-            &self.camera,
-            &draw_2d::TexturedQuad::new(
-                AABB::point(self.state.position.map(|x| x as f32))
-                    .extend_positive(self.state.ugli.size().map(|x| x as f32)),
-                &self.state.ugli,
-            ),
-        );
+        self.state.draw(framebuffer, &self.camera);
         if let Some(stroke) = &self.stroke {
             for &position in &stroke.pixels {
                 self.geng.draw_2d(
