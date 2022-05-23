@@ -107,8 +107,17 @@ impl geng::State for Client {
         match event {
             // Camera controls
             geng::Event::Wheel { delta } => {
+                let prev_pos = self.camera.screen_to_world(
+                    self.framebuffer_size.map(|x| x as f32),
+                    self.geng.window().cursor_position().map(|x| x as f32),
+                );
                 self.camera.fov =
                     (self.camera.fov * 1.01f32.powf(-delta as f32)).clamp(100.0, 3000.0);
+                let current_pos = self.camera.screen_to_world(
+                    self.framebuffer_size.map(|x| x as f32),
+                    self.geng.window().cursor_position().map(|x| x as f32),
+                );
+                self.camera.center += prev_pos - current_pos;
             }
             geng::Event::MouseDown {
                 position,
