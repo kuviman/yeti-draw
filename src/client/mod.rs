@@ -21,6 +21,7 @@ pub struct Client {
     camera_drag_start: Option<Vec2<f32>>,
     next_update_id: UpdateId,
     unconfirmed_updates: Vec<(UpdateId, ReversibleUpdate)>,
+    downloading: bool,
 }
 
 struct Stroke {
@@ -30,11 +31,11 @@ struct Stroke {
 }
 
 impl Client {
-    pub fn new(geng: &Geng, initial_state: Texture, connection: Connection) -> Self {
+    pub fn new(geng: &Geng, connection: Connection) -> Self {
         Self {
             geng: geng.clone(),
             connection,
-            state: texture::Infinite::from(geng, initial_state),
+            state: texture::Infinite::new(geng),
             framebuffer_size: vec2(1, 1),
             camera: geng::Camera2d {
                 center: vec2(0.0, 0.0),
@@ -47,6 +48,7 @@ impl Client {
             camera_drag_start: None,
             next_update_id: 0,
             unconfirmed_updates: default(),
+            downloading: false,
         }
     }
     fn screen_to_world(&self, position: Vec2<f64>) -> Vec2<f32> {
@@ -126,7 +128,11 @@ impl geng::State for Client {
             }
             for message in new_messages {
                 match message {
-                    ServerMessage::Initial(_) => unreachable!(),
+                    ServerMessage::Download { position, data } => {
+                        assert!(self.downloading);
+                        self.downloading = false;
+                        self.state.upload(position, data);
+                    }
                     ServerMessage::Update { your_id, update } => {
                         self.state.update(update);
                     }
@@ -141,7 +147,13 @@ impl geng::State for Client {
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
         ugli::clear(framebuffer, Some(Color::WHITE), None);
-        self.state.draw(framebuffer, &self.camera);
+        if let Some(request) = self.state.draw(framebuffer, &self.camera) {
+            if !self.downloading {
+                self.connection
+                    .send(ClientMessage::Download { area: request });
+                self.downloading = true;
+            }
+        }
         if let Some(stroke) = &self.stroke {
             stroke.texture.draw(framebuffer, &self.camera);
         }

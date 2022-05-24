@@ -1,12 +1,14 @@
 use super::*;
 
+mod texture;
+
 type ClientId = u64;
 type ClientState = Box<dyn geng::net::Sender<ServerMessage>>;
 
 struct ServerState {
     next_client_id: ClientId,
     clients: HashMap<ClientId, ClientState>,
-    state: AutoSaved<Texture>,
+    state: texture::Infinite,
 }
 
 impl ServerState {
@@ -14,11 +16,20 @@ impl ServerState {
         Self {
             next_client_id: 0,
             clients: default(),
-            state: AutoSaved::new("draw.save"),
+            state: texture::Infinite::new("save"),
         }
     }
     fn handle_message(&mut self, client_id: ClientId, message: ClientMessage) {
         match message {
+            ClientMessage::Download { area } => {
+                self.clients
+                    .get_mut(&client_id)
+                    .unwrap()
+                    .send(ServerMessage::Download {
+                        position: area.bottom_left(),
+                        data: self.state.get(area),
+                    });
+            }
             ClientMessage::Update { id, update } => {
                 for (&other_client_id, client) in &mut self.clients {
                     client.send(ServerMessage::Update {
@@ -30,7 +41,7 @@ impl ServerState {
                         update: update.clone(), // TODO: not clone
                     });
                 }
-                self.state.write().update(update);
+                self.state.update(update);
             }
         }
     }
@@ -74,7 +85,6 @@ impl geng::net::server::App for Server {
         mut sender: Box<dyn geng::net::Sender<ServerMessage>>,
     ) -> ClientConnection {
         let mut state = self.state.lock().unwrap();
-        sender.send(ServerMessage::Initial(state.state.read().clone())); // TODO: not clone
         let id = state.next_client_id;
         state.next_client_id += 1;
         state.clients.insert(id, sender);

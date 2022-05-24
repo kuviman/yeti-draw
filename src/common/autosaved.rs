@@ -61,7 +61,6 @@ impl<T: Default + Serialize + DeserializeOwned> State<T> {
         if !self.mutated {
             return;
         }
-        debug!("Saving");
         let value = self.value.as_mut().expect("Mutated but not loaded wtf?");
         let file = std::fs::File::create(&self.path).expect("Failed to create file");
         let writer = std::io::BufWriter::new(file);

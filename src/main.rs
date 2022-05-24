@@ -58,20 +58,10 @@ fn main() {
         let state = geng::LoadingScreen::new(
             &geng,
             geng::EmptyLoadingScreen,
-            {
-                let connection = geng::net::client::connect(opt.connect.as_deref().unwrap());
-                async move {
-                    let mut connection = connection.await;
-                    let message = connection.next().await;
-                    match message {
-                        Some(ServerMessage::Initial(state)) => (state, connection),
-                        _ => unreachable!(),
-                    }
-                }
-            },
+            geng::net::client::connect(opt.connect.as_deref().unwrap()),
             {
                 let geng = geng.clone();
-                move |(initial_state, connection)| Client::new(&geng, initial_state, connection)
+                move |connection| Client::new(&geng, connection)
             },
         );
         geng::run(&geng, state);

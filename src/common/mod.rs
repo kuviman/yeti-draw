@@ -1,47 +1,29 @@
 use super::*;
 
-mod autosave;
+pub mod autosaved;
+mod matrix;
 
-pub use autosave::*;
+pub use autosaved::AutoSaved;
+pub use matrix::*;
 
-#[derive(Default, Debug, Serialize, Deserialize, Clone)]
-pub struct Texture {
-    pub pixels: HashMap<Vec2<i32>, Color<u8>>,
+pub fn div_down<T: Num>(a: T, b: T) -> T {
+    if a < T::ZERO {
+        return -div_up(-a, b);
+    }
+    if b < T::ZERO {
+        return -div_up(a, -b);
+    }
+    a / b
 }
 
-impl Texture {
-    pub fn load() -> Self {
-        match std::fs::File::open("draw.save") {
-            Ok(file) => {
-                let start = std::time::Instant::now();
-                let result = bincode::deserialize_from(std::io::BufReader::new(file))
-                    .expect("Failed to load save");
-                debug!("Loaded in {:?}", start.elapsed());
-                result
-            }
-            Err(_) => Self { pixels: default() },
-        }
+pub fn div_up<T: Num>(a: T, b: T) -> T {
+    if a < T::ZERO {
+        return -div_down(-a, b);
     }
-    pub fn update(&mut self, update: Update) {
-        match update {
-            Update::Draw(pixels) => {
-                for pixel in pixels {
-                    self.pixels.insert(pixel.position, pixel.color);
-                }
-            }
-        }
+    if b < T::ZERO {
+        return -div_down(a, -b);
     }
-    pub fn save(&self) {
-        let start = std::time::Instant::now();
-        bincode::serialize_into(
-            std::io::BufWriter::new(
-                std::fs::File::create("draw.save").expect("Failed to create save"),
-            ),
-            self,
-        )
-        .expect("Failed to write save");
-        debug!("Saved in {:?}", start.elapsed());
-    }
+    (a + b - T::ONE) / b
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -59,12 +41,16 @@ pub type UpdateId = u64;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ClientMessage {
+    Download { area: AABB<i32> },
     Update { id: UpdateId, update: Update },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum ServerMessage {
-    Initial(Texture),
+    Download {
+        position: Vec2<i32>,
+        data: Matrix<Color<u8>>,
+    },
     Update {
         your_id: Option<UpdateId>,
         update: Update,

@@ -10,28 +10,8 @@ struct Chunk {
     ugli: ugli::Texture,
 }
 
-fn div_down<T: Num>(a: T, b: T) -> T {
-    if a < T::ZERO {
-        return -div_up(-a, b);
-    }
-    if b < T::ZERO {
-        return -div_up(a, -b);
-    }
-    a / b
-}
-
-fn div_up<T: Num>(a: T, b: T) -> T {
-    if a < T::ZERO {
-        return -div_down(-a, b);
-    }
-    if b < T::ZERO {
-        return -div_down(a, -b);
-    }
-    (a + b - T::ONE) / b
-}
-
 impl Infinite {
-    const CHUNK_SIZE: usize = 256;
+    const CHUNK_SIZE: usize = 64;
     pub fn new(geng: &Geng) -> Self {
         Self {
             geng: geng.clone(),
@@ -39,16 +19,30 @@ impl Infinite {
             chunks: HashMap::new(),
         }
     }
-    pub fn from(geng: &Geng, texture: Texture) -> Self {
-        let mut result = Self::new(geng);
-        result.update(Update::Draw(
-            texture
-                .pixels
-                .iter()
-                .map(|(&position, &color)| Pixel { position, color })
-                .collect(),
-        ));
-        result
+    pub fn upload(&mut self, position: Vec2<i32>, data: Matrix<Color<u8>>) {
+        assert_eq!(position.x % Self::CHUNK_SIZE as i32, 0);
+        assert_eq!(position.y % Self::CHUNK_SIZE as i32, 0);
+        let chunk_pos = position / Self::CHUNK_SIZE as i32;
+        for x in 0..data.size().x {
+            for y in 0..data.size().y {
+                self.pixels
+                    .insert(position + vec2(x, y).map(|x| x as i32), data[vec2(x, y)]);
+            }
+        }
+        self.chunks.insert(
+            chunk_pos,
+            Chunk {
+                ugli: {
+                    let mut texture = ugli::Texture::new_with(
+                        self.geng.ugli(),
+                        vec2(Self::CHUNK_SIZE, Self::CHUNK_SIZE),
+                        |pos| data[pos].convert(),
+                    );
+                    texture.set_filter(ugli::Filter::Nearest);
+                    texture
+                },
+            },
+        );
     }
     pub fn update(&mut self, update: Update) -> Update {
         match update {
@@ -77,6 +71,10 @@ impl Infinite {
                             texture
                         },
                     });
+                    let chunk = match self.chunks.get_mut(&chunk_pos) {
+                        Some(chunk) => chunk,
+                        None => continue,
+                    };
                     let pixel_position =
                         (pixel.position - chunk_pos * Self::CHUNK_SIZE as i32).map(|x| x as usize);
                     chunk
@@ -87,17 +85,44 @@ impl Infinite {
             }
         }
     }
-    pub fn draw(&self, framebuffer: &mut ugli::Framebuffer, camera: &impl geng::AbstractCamera2d) {
-        for (&position, chunk) in &self.chunks {
-            self.geng.draw_2d(
-                framebuffer,
-                camera,
-                &draw_2d::TexturedQuad::new(
-                    AABB::point(position.map(|x| x as f32) * Self::CHUNK_SIZE as f32)
-                        .extend_positive(chunk.ugli.size().map(|x| x as f32)),
-                    &chunk.ugli,
-                ),
-            );
+    pub fn draw(
+        &self,
+        framebuffer: &mut ugli::Framebuffer,
+        camera: &impl geng::AbstractCamera2d,
+    ) -> Option<AABB<i32>> {
+        let aabb = camera
+            .view_area(framebuffer.size().map(|x| x as f32))
+            .bounding_box();
+        let chunks = AABB {
+            x_min: (aabb.x_min as f32 / Self::CHUNK_SIZE as f32).floor() as i32,
+            y_min: (aabb.y_min as f32 / Self::CHUNK_SIZE as f32).floor() as i32,
+            x_max: (aabb.x_max as f32 / Self::CHUNK_SIZE as f32).ceil() as i32,
+            y_max: (aabb.y_max as f32 / Self::CHUNK_SIZE as f32).ceil() as i32,
+        };
+        let mut request = None;
+        for chunk_x in chunks.x_min..=chunks.x_max {
+            for chunk_y in chunks.y_min..=chunks.y_max {
+                let chunk_pos = vec2(chunk_x, chunk_y);
+                if let Some(chunk) = self.chunks.get(&chunk_pos) {
+                    self.geng.draw_2d(
+                        framebuffer,
+                        camera,
+                        &draw_2d::TexturedQuad::new(
+                            AABB::point(chunk_pos.map(|x| x as f32) * Self::CHUNK_SIZE as f32)
+                                .extend_positive(chunk.ugli.size().map(|x| x as f32)),
+                            &chunk.ugli,
+                        ),
+                    );
+                } else {
+                    request = Some(
+                        AABB::point(chunk_pos * Self::CHUNK_SIZE as i32).extend_positive(vec2(
+                            Self::CHUNK_SIZE as i32,
+                            Self::CHUNK_SIZE as i32,
+                        )),
+                    );
+                }
+            }
         }
+        request
     }
 }
