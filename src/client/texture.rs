@@ -31,7 +31,7 @@ fn div_up<T: Num>(a: T, b: T) -> T {
 }
 
 impl Infinite {
-    const CHUNK_SIZE: usize = 64;
+    const CHUNK_SIZE: usize = 256;
     pub fn new(geng: &Geng) -> Self {
         Self {
             geng: geng.clone(),
