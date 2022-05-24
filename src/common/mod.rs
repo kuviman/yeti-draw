@@ -8,7 +8,13 @@ pub struct Texture {
 impl Texture {
     pub fn load() -> Self {
         match std::fs::File::open("draw.save") {
-            Ok(file) => bincode::deserialize_from(file).expect("Failed to load save"),
+            Ok(file) => {
+                let start = std::time::Instant::now();
+                let result = bincode::deserialize_from(std::io::BufReader::new(file))
+                    .expect("Failed to load save");
+                debug!("Loaded in {:?}", start.elapsed());
+                result
+            }
             Err(_) => Self { pixels: default() },
         }
     }
@@ -22,11 +28,15 @@ impl Texture {
         }
     }
     pub fn save(&self) {
+        let start = std::time::Instant::now();
         bincode::serialize_into(
-            std::fs::File::create("draw.save").expect("Failed to create save"),
+            std::io::BufWriter::new(
+                std::fs::File::create("draw.save").expect("Failed to create save"),
+            ),
             self,
         )
         .expect("Failed to write save");
+        debug!("Saved in {:?}", start.elapsed());
     }
 }
 
