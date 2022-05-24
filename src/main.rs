@@ -20,7 +20,7 @@ pub struct Opt {
 }
 
 fn main() {
-    // logger::init().unwrap();
+    logger::init().unwrap();
     let mut opt: Opt = program_args::parse();
     if opt.connect.is_none() && opt.server.is_none() {
         if cfg!(target_arch = "wasm32") {
@@ -78,8 +78,10 @@ fn main() {
 
         #[cfg(not(target_arch = "wasm32"))]
         if let Some((server_handle, server_thread)) = server {
+            info!("Shutting down the server");
             server_handle.shutdown();
             server_thread.join().unwrap();
         }
     }
+    info!("Bye");
 }
