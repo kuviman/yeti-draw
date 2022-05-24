@@ -1,6 +1,10 @@
 use super::*;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+mod autosave;
+
+pub use autosave::*;
+
+#[derive(Default, Debug, Serialize, Deserialize, Clone)]
 pub struct Texture {
     pub pixels: HashMap<Vec2<i32>, Color<u8>>,
 }

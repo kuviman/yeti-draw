@@ -6,7 +6,7 @@ type ClientState = Box<dyn geng::net::Sender<ServerMessage>>;
 struct ServerState {
     next_client_id: ClientId,
     clients: HashMap<ClientId, ClientState>,
-    state: Texture,
+    state: AutoSaved<Texture>,
 }
 
 impl ServerState {
@@ -14,7 +14,7 @@ impl ServerState {
         Self {
             next_client_id: 0,
             clients: default(),
-            state: Texture::load(),
+            state: AutoSaved::new("draw.save"),
         }
     }
     fn handle_message(&mut self, client_id: ClientId, message: ClientMessage) {
@@ -30,10 +30,9 @@ impl ServerState {
                         update: update.clone(), // TODO: not clone
                     });
                 }
-                self.state.update(update);
+                self.state.write().update(update);
             }
         }
-        self.state.save();
     }
 }
 
@@ -75,7 +74,7 @@ impl geng::net::server::App for Server {
         mut sender: Box<dyn geng::net::Sender<ServerMessage>>,
     ) -> ClientConnection {
         let mut state = self.state.lock().unwrap();
-        sender.send(ServerMessage::Initial(state.state.clone())); // TODO: not clone
+        sender.send(ServerMessage::Initial(state.state.read().clone())); // TODO: not clone
         let id = state.next_client_id;
         state.next_client_id += 1;
         state.clients.insert(id, sender);
