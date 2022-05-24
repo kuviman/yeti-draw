@@ -6,8 +6,11 @@ pub struct Texture {
 }
 
 impl Texture {
-    pub fn new() -> Self {
-        Self { pixels: default() }
+    pub fn load() -> Self {
+        match std::fs::File::open("draw.save") {
+            Ok(file) => bincode::deserialize_from(file).expect("Failed to load save"),
+            Err(_) => Self { pixels: default() },
+        }
     }
     pub fn update(&mut self, update: Update) {
         match update {
@@ -17,6 +20,13 @@ impl Texture {
                 }
             }
         }
+    }
+    pub fn save(&self) {
+        bincode::serialize_into(
+            std::fs::File::create("draw.save").expect("Failed to create save"),
+            self,
+        )
+        .expect("Failed to write save");
     }
 }
 

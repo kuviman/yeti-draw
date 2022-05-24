@@ -14,7 +14,7 @@ impl ServerState {
         Self {
             next_client_id: 0,
             clients: default(),
-            state: Texture::new(),
+            state: Texture::load(),
         }
     }
     fn handle_message(&mut self, client_id: ClientId, message: ClientMessage) {
@@ -33,6 +33,7 @@ impl ServerState {
                 self.state.update(update);
             }
         }
+        self.state.save();
     }
 }
 
