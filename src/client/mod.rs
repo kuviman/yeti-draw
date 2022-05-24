@@ -105,35 +105,37 @@ impl Client {
 impl geng::State for Client {
     fn update(&mut self, delta_time: f64) {
         let new_messages: Vec<ServerMessage> = self.connection.new_messages().collect();
-        let last_confirmed = new_messages
-            .iter()
-            .filter_map(|message| match message {
-                ServerMessage::Update { your_id, .. } => *your_id,
-                _ => None,
-            })
-            .max();
-        let mut redo = Vec::new();
-        while let Some((id, update)) = self.unconfirmed_updates.pop() {
-            self.state.update(update.backward.clone()); // TODO: no clone
-            if Some(id) == last_confirmed {
-                break;
+        if !new_messages.is_empty() {
+            let last_confirmed = new_messages
+                .iter()
+                .filter_map(|message| match message {
+                    ServerMessage::Update { your_id, .. } => *your_id,
+                    _ => None,
+                })
+                .max();
+            let mut redo = Vec::new();
+            while let Some((id, update)) = self.unconfirmed_updates.pop() {
+                self.state.update(update.backward.clone()); // TODO: no clone
+                if Some(id) == last_confirmed {
+                    break;
+                }
+                redo.push((id, update));
             }
-            redo.push((id, update));
-        }
-        while let Some((id, update)) = self.unconfirmed_updates.pop() {
-            self.state.update(update.backward);
-        }
-        for message in new_messages {
-            match message {
-                ServerMessage::Initial(_) => unreachable!(),
-                ServerMessage::Update { your_id, update } => {
-                    self.state.update(update);
+            while let Some((id, update)) = self.unconfirmed_updates.pop() {
+                self.state.update(update.backward);
+            }
+            for message in new_messages {
+                match message {
+                    ServerMessage::Initial(_) => unreachable!(),
+                    ServerMessage::Update { your_id, update } => {
+                        self.state.update(update);
+                    }
                 }
             }
-        }
-        while let Some((id, update)) = redo.pop() {
-            self.state.update(update.forward.clone()); // TODO: no clone
-            self.unconfirmed_updates.push((id, update));
+            while let Some((id, update)) = redo.pop() {
+                self.state.update(update.forward.clone()); // TODO: no clone
+                self.unconfirmed_updates.push((id, update));
+            }
         }
     }
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
