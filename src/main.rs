@@ -3,10 +3,12 @@ use std::collections::VecDeque;
 
 mod client;
 mod common;
+#[cfg(not(target_arch = "wasm32"))]
 mod server;
 
 use client::Client;
 use common::*;
+#[cfg(not(target_arch = "wasm32"))]
 use server::Server;
 
 #[derive(clap::Parser, Clone)]
