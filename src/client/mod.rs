@@ -43,7 +43,7 @@ impl Client {
                 fov: 100.0,
             },
             stroke: None,
-            brush_size: 1.0,
+            brush_size: 2.0,
             color: Color::BLACK,
             camera_drag_start: None,
             next_update_id: 0,
