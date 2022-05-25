@@ -12,7 +12,7 @@ struct Chunk {
 }
 
 impl Infinite {
-    const CHUNK_SIZE: usize = 64;
+    const CHUNK_SIZE: usize = 256;
     pub fn new(geng: &Geng, ignore_unloaded_updates: bool) -> Self {
         Self {
             geng: geng.clone(),
