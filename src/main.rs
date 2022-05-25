@@ -55,6 +55,7 @@ fn main() {
             antialias: false,
             ..default()
         });
+        geng.window().set_cursor_type(geng::CursorType::None);
         let state = geng::LoadingScreen::new(
             &geng,
             geng::EmptyLoadingScreen,

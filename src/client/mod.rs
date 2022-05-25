@@ -157,6 +157,33 @@ impl geng::State for Client {
         if let Some(stroke) = &self.stroke {
             stroke.texture.draw(framebuffer, &self.camera);
         }
+
+        // Draw cursor
+        let mouse_pos = self.camera.screen_to_world(
+            framebuffer.size().map(|x| x as f32),
+            self.geng.window().mouse_pos().map(|x| x as f32),
+        );
+        let width = 0.1;
+        self.geng.draw_2d(
+            framebuffer,
+            &self.camera,
+            &draw_2d::Ellipse::circle_with_cut(
+                mouse_pos,
+                self.brush_size - width * 2.0,
+                self.brush_size + width * 2.0,
+                Color::WHITE,
+            ),
+        );
+        self.geng.draw_2d(
+            framebuffer,
+            &self.camera,
+            &draw_2d::Ellipse::circle_with_cut(
+                mouse_pos,
+                self.brush_size - width,
+                self.brush_size + width,
+                Color::BLACK,
+            ),
+        );
     }
     fn handle_event(&mut self, event: geng::Event) {
         match event {
