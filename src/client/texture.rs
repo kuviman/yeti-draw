@@ -2,6 +2,7 @@ use super::*;
 
 pub struct Infinite {
     geng: Geng,
+    ignore_unloaded_updates: bool,
     pixels: HashMap<Vec2<i32>, Color<u8>>,
     chunks: HashMap<Vec2<i32>, Chunk>,
 }
@@ -12,9 +13,10 @@ struct Chunk {
 
 impl Infinite {
     const CHUNK_SIZE: usize = 64;
-    pub fn new(geng: &Geng) -> Self {
+    pub fn new(geng: &Geng, ignore_unloaded_updates: bool) -> Self {
         Self {
             geng: geng.clone(),
+            ignore_unloaded_updates,
             pixels: default(),
             chunks: HashMap::new(),
         }
@@ -60,17 +62,19 @@ impl Infinite {
                     self.pixels.insert(pixel.position, pixel.color);
 
                     let chunk_pos = pixel.position.map(|x| div_down(x, Self::CHUNK_SIZE as _));
-                    let chunk = self.chunks.entry(chunk_pos).or_insert_with(|| Chunk {
-                        ugli: {
-                            let mut texture = ugli::Texture::new_with(
-                                self.geng.ugli(),
-                                vec2(Self::CHUNK_SIZE, Self::CHUNK_SIZE),
-                                |_| Color::TRANSPARENT_BLACK,
-                            );
-                            texture.set_filter(ugli::Filter::Nearest);
-                            texture
-                        },
-                    });
+                    if !self.ignore_unloaded_updates {
+                        self.chunks.entry(chunk_pos).or_insert_with(|| Chunk {
+                            ugli: {
+                                let mut texture = ugli::Texture::new_with(
+                                    self.geng.ugli(),
+                                    vec2(Self::CHUNK_SIZE, Self::CHUNK_SIZE),
+                                    |_| Color::TRANSPARENT_BLACK,
+                                );
+                                texture.set_filter(ugli::Filter::Nearest);
+                                texture
+                            },
+                        });
+                    }
                     let chunk = match self.chunks.get_mut(&chunk_pos) {
                         Some(chunk) => chunk,
                         None => continue,
@@ -114,6 +118,20 @@ impl Infinite {
                         ),
                     );
                 } else {
+                    if self.ignore_unloaded_updates {
+                        self.geng.draw_2d(
+                            framebuffer,
+                            camera,
+                            &draw_2d::Quad::new(
+                                AABB::point(chunk_pos.map(|x| x as f32) * Self::CHUNK_SIZE as f32)
+                                    .extend_positive(vec2(
+                                        Self::CHUNK_SIZE as f32,
+                                        Self::CHUNK_SIZE as f32,
+                                    )),
+                                Color::GRAY,
+                            ),
+                        );
+                    }
                     request = Some(
                         AABB::point(chunk_pos * Self::CHUNK_SIZE as i32).extend_positive(vec2(
                             Self::CHUNK_SIZE as i32,

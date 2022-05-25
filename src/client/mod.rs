@@ -35,7 +35,7 @@ impl Client {
         Self {
             geng: geng.clone(),
             connection,
-            state: texture::Infinite::new(geng),
+            state: texture::Infinite::new(geng, true),
             framebuffer_size: vec2(1, 1),
             camera: geng::Camera2d {
                 center: vec2(0.0, 0.0),
@@ -207,7 +207,7 @@ impl geng::State for Client {
                 let position = self.screen_to_world(position);
                 self.stroke = Some(Stroke {
                     pixels: default(),
-                    texture: texture::Infinite::new(&self.geng),
+                    texture: texture::Infinite::new(&self.geng, false),
                     last_position: position,
                 });
                 self.mouse_move(position);
