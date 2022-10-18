@@ -29,7 +29,7 @@ pub fn div_up<T: Num>(a: T, b: T) -> T {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pixel {
     pub position: Vec2<i32>,
-    pub color: Color<u8>,
+    pub color: Rgba<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -49,7 +49,7 @@ pub enum ClientMessage {
 pub enum ServerMessage {
     Download {
         position: Vec2<i32>,
-        data: Matrix<Color<u8>>,
+        data: Matrix<Rgba<u8>>,
     },
     Update {
         your_id: Option<UpdateId>,

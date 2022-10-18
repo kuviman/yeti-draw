@@ -16,7 +16,7 @@ pub struct Client {
     framebuffer_size: Vec2<usize>,
     camera: geng::Camera2d,
     stroke: Option<Stroke>,
-    color: Color<f32>,
+    color: Rgba<f32>,
     brush_size: f32,
     camera_drag_start: Option<Vec2<f32>>,
     next_update_id: UpdateId,
@@ -44,7 +44,7 @@ impl Client {
             },
             stroke: None,
             brush_size: 2.0,
-            color: Color::BLACK,
+            color: Rgba::BLACK,
             camera_drag_start: None,
             next_update_id: 0,
             unconfirmed_updates: default(),
@@ -146,7 +146,7 @@ impl geng::State for Client {
     }
     fn draw(&mut self, framebuffer: &mut ugli::Framebuffer) {
         self.framebuffer_size = framebuffer.size();
-        ugli::clear(framebuffer, Some(Color::WHITE), None);
+        ugli::clear(framebuffer, Some(Rgba::WHITE), None, None);
         if let Some(request) = self.state.draw(framebuffer, &self.camera) {
             if !self.downloading {
                 self.connection
@@ -171,7 +171,7 @@ impl geng::State for Client {
                 mouse_pos,
                 self.brush_size - width * 2.0,
                 self.brush_size + width * 2.0,
-                Color::WHITE,
+                Rgba::WHITE,
             ),
         );
         self.geng.draw_2d(
@@ -181,7 +181,7 @@ impl geng::State for Client {
                 mouse_pos,
                 self.brush_size - width,
                 self.brush_size + width,
-                Color::BLACK,
+                Rgba::BLACK,
             ),
         );
     }
@@ -263,10 +263,10 @@ impl geng::State for Client {
             }
             geng::Event::KeyDown { key } => match key {
                 geng::Key::W => {
-                    self.color = Color::WHITE;
+                    self.color = Rgba::WHITE;
                 }
                 geng::Key::B => {
-                    self.color = Color::BLACK;
+                    self.color = Rgba::BLACK;
                 }
                 geng::Key::PageUp => {
                     self.brush_size = (self.brush_size + 0.5).min(10.0);

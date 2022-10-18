@@ -7,6 +7,7 @@ pub struct Infinite {
 
 impl Infinite {
     pub fn new(path: impl AsRef<std::path::Path>) -> Self {
+        std::fs::create_dir_all(path.as_ref());
         Self {
             path: path.as_ref().to_owned(),
             chunks: default(),
@@ -25,9 +26,9 @@ impl Infinite {
             }
         }
     }
-    pub fn get(&mut self, rect: AABB<i32>) -> Matrix<Color<u8>> {
+    pub fn get(&mut self, rect: AABB<i32>) -> Matrix<Rgba<u8>> {
         let mut result =
-            Matrix::filled_with(rect.size().map(|x| x as usize), Color::TRANSPARENT_BLACK);
+            Matrix::filled_with(rect.size().map(|x| x as usize), Rgba::TRANSPARENT_BLACK);
         let chunks = AABB {
             x_min: div_down(rect.x_min, Chunk::SIZE as _),
             y_min: div_down(rect.y_min, Chunk::SIZE as _),
@@ -69,13 +70,13 @@ impl Infinite {
 
 #[derive(Serialize, Deserialize)]
 struct Chunk {
-    pixels: Matrix<Color<u8>>,
+    pixels: Matrix<Rgba<u8>>,
 }
 
 impl Default for Chunk {
     fn default() -> Self {
         Self {
-            pixels: Matrix::filled_with(vec2(Self::SIZE, Self::SIZE), Color::TRANSPARENT_BLACK),
+            pixels: Matrix::filled_with(vec2(Self::SIZE, Self::SIZE), Rgba::TRANSPARENT_BLACK),
         }
     }
 }

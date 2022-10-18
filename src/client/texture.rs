@@ -3,7 +3,7 @@ use super::*;
 pub struct Infinite {
     geng: Geng,
     ignore_unloaded_updates: bool,
-    pixels: HashMap<Vec2<i32>, Color<u8>>,
+    pixels: HashMap<Vec2<i32>, Rgba<u8>>,
     chunks: HashMap<Vec2<i32>, Chunk>,
 }
 
@@ -21,7 +21,7 @@ impl Infinite {
             chunks: HashMap::new(),
         }
     }
-    pub fn upload(&mut self, position: Vec2<i32>, data: Matrix<Color<u8>>) {
+    pub fn upload(&mut self, position: Vec2<i32>, data: Matrix<Rgba<u8>>) {
         assert_eq!(position.x % Self::CHUNK_SIZE as i32, 0);
         assert_eq!(position.y % Self::CHUNK_SIZE as i32, 0);
         let chunk_pos = position / Self::CHUNK_SIZE as i32;
@@ -57,7 +57,7 @@ impl Infinite {
                             .pixels
                             .get(&pixel.position)
                             .copied()
-                            .unwrap_or(Color::TRANSPARENT_BLACK),
+                            .unwrap_or(Rgba::TRANSPARENT_BLACK),
                     });
                     self.pixels.insert(pixel.position, pixel.color);
 
@@ -68,7 +68,7 @@ impl Infinite {
                                 let mut texture = ugli::Texture::new_with(
                                     self.geng.ugli(),
                                     vec2(Self::CHUNK_SIZE, Self::CHUNK_SIZE),
-                                    |_| Color::TRANSPARENT_BLACK,
+                                    |_| Rgba::TRANSPARENT_BLACK,
                                 );
                                 texture.set_filter(ugli::Filter::Nearest);
                                 texture
@@ -128,7 +128,7 @@ impl Infinite {
                                         Self::CHUNK_SIZE as f32,
                                         Self::CHUNK_SIZE as f32,
                                     )),
-                                Color::GRAY,
+                                Rgba::GRAY,
                             ),
                         );
                     }
